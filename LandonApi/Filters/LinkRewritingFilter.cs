@@ -23,9 +23,7 @@ namespace LandonApi.Filters
         public Task OnResultExecutionAsync(ResultExecutingContext context, ResultExecutionDelegate next)
         {
             var asObjectResult = context.Result as ObjectResult;
-            bool shouldSkip = asObjectResult?.StatusCode >= 400
-                || asObjectResult?.Value == null
-                || asObjectResult?.Value as Resource == null;
+            var shouldSkip = asObjectResult?.StatusCode >= 400 || !(asObjectResult?.Value is Resource);
 
             // If result is something unexpected, call next(), which allows the response to continue
             if (shouldSkip)
@@ -45,8 +43,7 @@ namespace LandonApi.Filters
                 .Where(p => p.CanRead)
                 .ToArray();
 
-            var linkProperties = allProperties.Where(p => p.CanWrite && p.PropertyType == typeof(Link));
-
+            var linkProperties = allProperties.Where(p => p.CanWrite && p.PropertyType == typeof(Link)).ToList();
             foreach (var linkProperty in linkProperties)
             {
                 var rewritten = rewriter.Rewrite(linkProperty.GetValue(model) as Link);
@@ -63,11 +60,11 @@ namespace LandonApi.Filters
                     allProperties.SingleOrDefault(p => p.Name == nameof(Resource.Method))
                         ?.SetValue(model, rewritten.Method);
                 }
-                    allProperties.SingleOrDefault(p => p.Name == nameof(Resource.Relations))
+                allProperties.SingleOrDefault(p => p.Name == nameof(Resource.Relations))
                         ?.SetValue(model, rewritten.Relations);
             }
 
-            var arrayProperties = allProperties.Where(p => p.PropertyType.IsArray);
+            var arrayProperties = allProperties.Where(p => p.PropertyType.IsArray).ToList();
             RewriteLinksInArray(arrayProperties, model, rewriter);
 
             var objectProperties = allProperties
