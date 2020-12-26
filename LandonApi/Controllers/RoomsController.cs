@@ -1,9 +1,12 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using LandonApi.Models;
+using LandonApi.Services;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using LandonApi.Models;
-using LandonApi.Services;
 
 namespace LandonApi.Controllers
 {
@@ -11,44 +14,63 @@ namespace LandonApi.Controllers
     [ApiController]
     public class RoomsController : ControllerBase
     {
-
         private readonly IRoomService _roomService;
         private readonly IOpeningService _openingService;
+        private readonly PagingOptions _defaultPagingOptions;
 
-        public RoomsController(IRoomService roomService, IOpeningService openingService)
+        public RoomsController(
+            IRoomService roomService,
+            IOpeningService openingService,
+            IOptions<PagingOptions> defaultPagingOptionsWrapper)
         {
             _roomService = roomService;
             _openingService = openingService;
+            _defaultPagingOptions = defaultPagingOptionsWrapper.Value;
         }
 
+        // GET /rooms
         [HttpGet(Name = nameof(GetAllRooms))]
         [ProducesResponseType(200)]
-        public async Task<ActionResult<Collection<Room>>> GetAllRooms()
+        [ProducesResponseType(400)]
+        public async Task<ActionResult<Collection<Room>>> GetAllRooms(
+            [FromQuery] PagingOptions pagingOptions = null,
+            [FromQuery] SortOptions<Room, RoomEntity> sortOptions = null)
         {
-            var rooms = await _roomService.GetRoomsAsync();
+            pagingOptions.Offset = pagingOptions.Offset ?? _defaultPagingOptions.Offset;
+            pagingOptions.Limit = pagingOptions.Limit ?? _defaultPagingOptions.Limit;
+            
+            var rooms = await _roomService.GetRoomsAsync(pagingOptions, sortOptions);
 
-            return new Collection<Room>
-            {
-                Self = Link.ToCollection(nameof(GetAllRooms)),
-                Value = rooms.ToArray()
-            };
-        }
-
-        [HttpGet(Name = nameof(GetAllRoomOpenings))]
-        [ProducesResponseType(200)]
-        public async Task<ActionResult<Collection<Opening>>> GetAllRoomOpenings()
-        {
-            var openings = await _openingService.GetOpeningAsync();
-
-            var collection = new Collection<Opening>()
-            {
-                Self = Link.ToCollection(nameof(GetAllRoomOpenings)),
-                Value = openings.ToArray()
-            };
+            var collection = PagedCollection<Room>.Create(Link.ToCollection(nameof(GetAllRooms)),
+                rooms.Items.ToArray(),
+                rooms.TotalSize,
+                pagingOptions);
+                
             return collection;
         }
-        
-        // GET/rooms/{roomId}
+
+        // GET /rooms/openings
+        [HttpGet("openings", Name = nameof(GetAllRoomOpenings))]
+        [ProducesResponseType(400)]
+        [ProducesResponseType(200)]
+        public async Task<ActionResult<Collection<Opening>>> GetAllRoomOpenings(
+            [FromQuery] PagingOptions pagingOptions = null
+            )
+        {
+            pagingOptions.Offset = pagingOptions.Offset ?? _defaultPagingOptions.Offset;
+            pagingOptions.Limit = pagingOptions.Limit ?? _defaultPagingOptions.Limit;
+
+            var openings = await _openingService.GetOpeningsAsync(pagingOptions);
+
+            var collection = PagedCollection<Opening>.Create(Link.ToCollection(nameof(GetAllRoomOpenings)),
+                openings.Items.ToArray(),
+                openings.TotalSize,
+                pagingOptions);
+
+            return collection;
+        }
+
+        // GET /rooms/{roomId}
         [HttpGet("{roomId}", Name = nameof(GetRoomById))]
         [ProducesResponseType(404)]
         [ProducesResponseType(200)]
@@ -56,6 +78,7 @@ namespace LandonApi.Controllers
         {
             var room = await _roomService.GetRoomAsync(roomId);
             if (room == null) return NotFound();
+
             return room;
         }
     }

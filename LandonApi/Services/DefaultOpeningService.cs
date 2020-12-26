@@ -1,10 +1,10 @@
-﻿using System;
+﻿using AutoMapper;
+using LandonApi.Models;
+using Microsoft.EntityFrameworkCore;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using AutoMapper;
-using LandonApi.Models;
-using Microsoft.EntityFrameworkCore;
 
 namespace LandonApi.Services
 {
@@ -23,8 +23,8 @@ namespace LandonApi.Services
             _dateLogicService = dateLogicService;
             _mapper = mapper;
         }
-        
-        public async Task<IEnumerable<Opening>> GetOpeningAsync()
+
+        public async Task<PagedResults<Opening>> GetOpeningsAsync(PagingOptions pagingOptions)
         {
             var rooms = await _context.Rooms.ToArrayAsync();
 
@@ -34,15 +34,16 @@ namespace LandonApi.Services
             {
                 // Generate a sequence of raw opening slots
                 var allPossibleOpenings = _dateLogicService.GetAllSlots(
-                    DateTimeOffset.UtcNow,
-                    _dateLogicService.FurthestPossibleBooking(DateTimeOffset.UtcNow)).ToArray();
+                        DateTimeOffset.UtcNow,
+                        _dateLogicService.FurthestPossibleBooking(DateTimeOffset.UtcNow))
+                    .ToArray();
 
                 var conflictedSlots = await GetConflictingSlots(
                     room.Id,
                     allPossibleOpenings.First().StartAt,
                     allPossibleOpenings.Last().EndAt);
-                
-                // Remove the slots that have conflicts and project 
+
+                // Remove the slots that have conflicts and project
                 var openings = allPossibleOpenings
                     .Except(conflictedSlots, new BookingRangeComparer())
                     .Select(slot => new OpeningEntity
@@ -53,15 +54,32 @@ namespace LandonApi.Services
                         EndAt = slot.EndAt
                     })
                     .Select(model => _mapper.Map<Opening>(model));
+
                 allOpenings.AddRange(openings);
             }
 
-            return allOpenings;
+            var pagedOpenings = allOpenings
+                .Skip(pagingOptions.Offset.Value)
+                .Take(pagingOptions.Limit.Value);
+
+            return new PagedResults<Opening>
+            {
+                Items = pagedOpenings,
+                TotalSize = allOpenings.Count
+            };
         }
 
-        public Task<IEnumerable<BookingRange>> GetConflictingSlots(Guid roomId, DateTimeOffset start, DateTimeOffset end)
+        public async Task<IEnumerable<BookingRange>> GetConflictingSlots(
+            Guid roomId,
+            DateTimeOffset start,
+            DateTimeOffset end)
         {
-            throw new NotImplementedException();
+            return await _context.Bookings
+                .Where(b => b.Room.Id == roomId && _dateLogicService.DoesConflict(b, start, end))
+                // Split each existing booking up into a set of atomic slots
+                .SelectMany(existing => _dateLogicService
+                    .GetAllSlots(existing.StartAt, existing.EndAt))
+                .ToArrayAsync();
         }
     }
 }

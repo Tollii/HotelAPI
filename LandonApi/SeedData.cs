@@ -36,6 +36,24 @@ namespace LandonApi
                 Rate = 23959
             });
 
+            await context.Rooms.AddAsync(new RoomEntity
+            {
+                Id = Guid.Parse("b9187284-18c6-4c96-8360-5277fb0ab400"),
+                Name = "Janna Suite",
+                Rate = 1210
+            });
+            await context.Rooms.AddAsync(new RoomEntity
+            {
+                Id = Guid.Parse("446e095d-165a-4ff4-a05b-007b2168d94b"),
+                Name = "Awesome Suite",
+                Rate = 1201
+            });
+            await context.Rooms.AddAsync(new RoomEntity
+            {
+                Id = Guid.Parse("f3209878-fae4-4bbf-964f-e5f06c014590"),
+                Name = "random Suite",
+                Rate = 123
+            });
             await context.SaveChangesAsync();
         }
     }

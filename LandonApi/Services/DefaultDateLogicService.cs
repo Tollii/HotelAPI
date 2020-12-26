@@ -1,8 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using LandonApi.Models;
-using Microsoft.EntityFrameworkCore.ChangeTracking.Internal;
+﻿using LandonApi.Models;
 using Microsoft.Extensions.Options;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace LandonApi.Services
 {
@@ -10,13 +11,21 @@ namespace LandonApi.Services
     {
         private readonly HotelOptions _hotelOptions;
 
-        public DefaultDateLogicService(IOptions<HotelOptions> optionAccessor)
+        public DefaultDateLogicService(IOptions<HotelOptions> optionsAccessor)
         {
-            _hotelOptions = optionAccessor.Value;
+            _hotelOptions = optionsAccessor.Value;
         }
+
+        public TimeSpan GetMinimumStay()
+            => TimeSpan.FromHours(_hotelOptions.MinimumStayHours);
+
+        public DateTimeOffset FurthestPossibleBooking(DateTimeOffset now)
+            => AlignStartTime(now) + TimeSpan.FromDays(_hotelOptions.MaxAdvanceBookingDays);
+
         public DateTimeOffset AlignStartTime(DateTimeOffset original)
         {
-            var dateInServerOffset = original.ToOffset(TimeSpan.FromHours(_hotelOptions.UtcOffsetHours));
+            var dateInServerOffset = original.ToOffset(
+                TimeSpan.FromHours(_hotelOptions.UtcOffsetHours));
             return new DateTimeOffset(
                 dateInServerOffset.Year,
                 dateInServerOffset.Month,
@@ -25,18 +34,15 @@ namespace LandonApi.Services
                 dateInServerOffset.Offset);
         }
 
-        public TimeSpan GetMinimumStay() => TimeSpan.FromHours(_hotelOptions.MinimumStayHours);
-
-        public DateTimeOffset FurthestPossibleBooking(DateTimeOffset now)
-            => AlignStartTime(now) + TimeSpan.FromDays(_hotelOptions.MaxAdvanceBookingDays);
-
-        public IEnumerable<BookingRange> GetAllSlots(DateTimeOffset start, DateTimeOffset? end = null)
+        public IEnumerable<BookingRange> GetAllSlots(
+            DateTimeOffset start,
+            DateTimeOffset? end = null)
         {
             var newStart = AlignStartTime(start);
-            
+
             while (true)
             {
-                if (newStart > end) yield break;
+                if (end != null && newStart >= end) yield break;
 
                 var newEnd = newStart.Add(TimeSpan.FromHours(_hotelOptions.MinimumStayHours));
                 yield return new BookingRange
@@ -52,8 +58,16 @@ namespace LandonApi.Services
         public bool DoesConflict(BookingRange b, DateTimeOffset start, DateTimeOffset end)
         {
             return
+                // Bookings with the same start or end time
                 (b.StartAt == start || b.EndAt == end)
+
+                // Bookings overlapping the start of our window of interest
                 || (b.StartAt < start && b.EndAt > start)
+
+                // Bookings overlapping the end of our window of interest
+                || (b.StartAt < end && b.EndAt > end)
+
+                // Bookings during our window of interest
                 || (b.StartAt > start && b.EndAt < end);
         }
     }

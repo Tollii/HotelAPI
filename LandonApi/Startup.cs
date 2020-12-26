@@ -37,10 +37,16 @@ namespace LandonApi
             // Pull data from appsettings.json
             services.Configure<HotelInfo>(
                 Configuration.GetSection("Info"));
+            
+            // Paging options
+            services.Configure<PagingOptions>(Configuration.GetSection("DefaultPagingOptions"));
 
-            // Add service for rooms
+            // Inject services
             services.AddScoped<IRoomService, DefaultRoomService>();
-
+            services.AddScoped<IOpeningService, DefaultOpeningService>();
+            services.AddScoped<IBookingService, DefaultBookingService>();
+            services.AddScoped<IDateLogicService, DefaultDateLogicService>();
+            
             // Adds automapper dependency to reduce boilerplate code in controller
             services.AddAutoMapper(options => options.AddProfile<MappingProfile>());
 
@@ -82,6 +88,15 @@ namespace LandonApi
             services.AddCors(options =>
             {
                 options.AddPolicy("AllowMyApp", policy => policy.AllowAnyOrigin());
+            });
+
+            services.Configure<ApiBehaviorOptions>(options =>
+            {
+                options.InvalidModelStateResponseFactory = context =>
+                {
+                    var errorResponse = new ApiError(context.ModelState);
+                    return new BadRequestObjectResult(errorResponse);
+                };
             });
         }
 

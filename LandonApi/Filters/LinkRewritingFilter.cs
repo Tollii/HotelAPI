@@ -13,24 +13,29 @@ namespace LandonApi.Filters
 {
     public class LinkRewritingFilter : IAsyncResultFilter
     {
-
         private readonly IUrlHelperFactory _urlHelperFactory;
 
         public LinkRewritingFilter(IUrlHelperFactory urlHelperFactory)
         {
             _urlHelperFactory = urlHelperFactory;
         }
-        public Task OnResultExecutionAsync(ResultExecutingContext context, ResultExecutionDelegate next)
+
+        public Task OnResultExecutionAsync(
+            ResultExecutingContext context, ResultExecutionDelegate next)
         {
             var asObjectResult = context.Result as ObjectResult;
-            var shouldSkip = asObjectResult?.StatusCode >= 400 || !(asObjectResult?.Value is Resource);
+            bool shouldSkip = asObjectResult?.StatusCode >= 400
+                || asObjectResult?.Value == null
+                || asObjectResult?.Value as Resource == null;
 
-            // If result is something unexpected, call next(), which allows the response to continue
             if (shouldSkip)
+            {
                 return next();
+            }
 
             var rewriter = new LinkRewriter(_urlHelperFactory.GetUrlHelper(context));
             RewriteAllLinks(asObjectResult.Value, rewriter);
+
             return next();
         }
 
@@ -38,59 +43,53 @@ namespace LandonApi.Filters
         {
             if (model == null) return;
 
-            var allProperties = model.GetType().GetTypeInfo()
+            var allProperties = model
+                .GetType().GetTypeInfo()
                 .GetProperties()
                 .Where(p => p.CanRead)
                 .ToArray();
 
-            var linkProperties = allProperties.Where(p => p.CanWrite && p.PropertyType == typeof(Link)).ToList();
-            foreach (var linkProperty in linkProperties)
+            var linkProperties = allProperties
+                .Where(p => p.CanWrite && p.PropertyType == typeof(Link));
+
+            var propertyInfos = linkProperties.ToList();
+            foreach (var linkProperty in propertyInfos)
             {
                 var rewritten = rewriter.Rewrite(linkProperty.GetValue(model) as Link);
                 if (rewritten == null) continue;
 
                 linkProperty.SetValue(model, rewritten);
 
-                // Special handling for Self property
+                // Special handling of the hidden Self property:
+                // unwrap into the root object
                 if (linkProperty.Name == nameof(Resource.Self))
                 {
-                    allProperties.SingleOrDefault(p => p.Name == nameof(Resource.Href))
+                    allProperties
+                        .SingleOrDefault(p => p.Name == nameof(Resource.Href))
                         ?.SetValue(model, rewritten.Href);
 
-                    allProperties.SingleOrDefault(p => p.Name == nameof(Resource.Method))
+                    allProperties
+                        .SingleOrDefault(p => p.Name == nameof(Resource.Method))
                         ?.SetValue(model, rewritten.Method);
-                }
-                allProperties.SingleOrDefault(p => p.Name == nameof(Resource.Relations))
+
+                    allProperties
+                        .SingleOrDefault(p => p.Name == nameof(Resource.Relations))
                         ?.SetValue(model, rewritten.Relations);
+                }
             }
 
-            var arrayProperties = allProperties.Where(p => p.PropertyType.IsArray).ToList();
-            RewriteLinksInArray(arrayProperties, model, rewriter);
+            var arrayProperties = allProperties.Where(p => p.PropertyType.IsArray);
+            var properties = arrayProperties.ToList();
+            RewriteLinksInArrays(properties, model, rewriter);
 
             var objectProperties = allProperties
-                .Except(linkProperties)
-                .Except(arrayProperties);
-
+                .Except(propertyInfos)
+                .Except(properties);
             RewriteLinksInNestedObjects(objectProperties, model, rewriter);
         }
 
-        private static void RewriteLinksInArray(
-            IEnumerable<PropertyInfo> arrayProperties,
-            object model,
-            LinkRewriter rewriter)
-        {
-            foreach (var arrayProperty in arrayProperties)
-            {
-                var array = arrayProperty.GetValue(model) as Array ?? new Array[0];
-
-                foreach (var element in array)
-                {
-                    RewriteAllLinks(element, rewriter);
-                }
-            }
-        }
-
-        private static void RewriteLinksInNestedObjects(IEnumerable<PropertyInfo> objectProperties,
+        private static void RewriteLinksInNestedObjects(
+            IEnumerable<PropertyInfo> objectProperties,
             object model,
             LinkRewriter rewriter)
         {
@@ -108,5 +107,23 @@ namespace LandonApi.Filters
                 }
             }
         }
+
+        private static void RewriteLinksInArrays(
+            IEnumerable<PropertyInfo> arrayProperties,
+            object model,
+            LinkRewriter rewriter)
+        {
+
+            foreach (var arrayProperty in arrayProperties)
+            {
+                var array = arrayProperty.GetValue(model) as Array ?? new Array[0];
+
+                foreach (var element in array)
+                {
+                    RewriteAllLinks(element, rewriter);
+                }
+            }
+        }
+
     }
 }

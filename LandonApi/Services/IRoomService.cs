@@ -1,14 +1,15 @@
-﻿using System;
-using System.Collections;
+﻿using LandonApi.Models;
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
-using LandonApi.Models;
 
 namespace LandonApi.Services
 {
     public interface IRoomService
     {
-        Task<IEnumerable<Room>> GetRoomsAsync();
+        Task<PagedResults<Room>> GetRoomsAsync(PagingOptions pagingOptions, SortOptions<Room, RoomEntity> sortOptions);
+
         Task<Room> GetRoomAsync(Guid id);
     }
 }

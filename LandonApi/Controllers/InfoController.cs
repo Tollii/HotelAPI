@@ -1,7 +1,10 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using LandonApi.Models;
-using System;
+﻿using LandonApi.Models;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace LandonApi.Controllers
 {
@@ -9,7 +12,6 @@ namespace LandonApi.Controllers
     [ApiController]
     public class InfoController : ControllerBase
     {
-
         private readonly HotelInfo _hotelInfo;
 
         public InfoController(IOptions<HotelInfo> hotelInfoWrapper)
