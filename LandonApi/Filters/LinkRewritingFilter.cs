@@ -45,15 +45,14 @@ namespace LandonApi.Filters
 
             var allProperties = model
                 .GetType().GetTypeInfo()
-                .GetProperties()
+                .GetAllProperties()
                 .Where(p => p.CanRead)
                 .ToArray();
 
             var linkProperties = allProperties
                 .Where(p => p.CanWrite && p.PropertyType == typeof(Link));
 
-            var propertyInfos = linkProperties.ToList();
-            foreach (var linkProperty in propertyInfos)
+            foreach (var linkProperty in linkProperties)
             {
                 var rewritten = rewriter.Rewrite(linkProperty.GetValue(model) as Link);
                 if (rewritten == null) continue;
@@ -79,12 +78,11 @@ namespace LandonApi.Filters
             }
 
             var arrayProperties = allProperties.Where(p => p.PropertyType.IsArray);
-            var properties = arrayProperties.ToList();
-            RewriteLinksInArrays(properties, model, rewriter);
+            RewriteLinksInArrays(arrayProperties, model, rewriter);
 
             var objectProperties = allProperties
-                .Except(propertyInfos)
-                .Except(properties);
+                .Except(linkProperties)
+                .Except(arrayProperties);
             RewriteLinksInNestedObjects(objectProperties, model, rewriter);
         }
 

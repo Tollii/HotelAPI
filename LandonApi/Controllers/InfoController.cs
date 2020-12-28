@@ -5,6 +5,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using LandonApi.Infrastructure;
+using Microsoft.AspNetCore.WebUtilities;
 
 namespace LandonApi.Controllers
 {
@@ -21,9 +23,17 @@ namespace LandonApi.Controllers
 
         [HttpGet(Name = nameof(GetInfo))]
         [ProducesResponseType(200)]
+        [ProducesResponseType(304)]
+        [ResponseCache(CacheProfileName = "Static")]
+        [Etag]
         public ActionResult<HotelInfo> GetInfo()
         {
             _hotelInfo.Href = Url.Link(nameof(GetInfo), null);
+
+            if (!Request.GetEtagHandler().NoneMatch(_hotelInfo))
+            {
+                return StatusCode(304, _hotelInfo);
+            }
 
             return _hotelInfo;
         }

@@ -1,32 +1,23 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
+using System.Threading.Tasks;
 
 namespace LandonApi.Infrastructure
 {
-    public class DecimalToIntSearchExpressionProvider : DefaultSearchExpressionProvider
+    public class DecimalToIntSearchExpressionProvider : ComparableSearchExpressionProvider
     {
         public override ConstantExpression GetValue(string input)
         {
             if (!decimal.TryParse(input, out var dec))
-                throw new ArgumentException("Invalid search value");
+                throw new ArgumentException("Invalid search value.");
 
-            // Get number of decimals
             var places = BitConverter.GetBytes(decimal.GetBits(dec)[3])[2];
             if (places < 2) places = 2;
-            var justDigits = (int) (dec * (decimal) Math.Pow(10, places));
-            return Expression.Constant(justDigits);
-        }
+            var justDigits = (int)(dec * (decimal)Math.Pow(10, places));
 
-        public override Expression GetComparison(MemberExpression left, string op, ConstantExpression right)
-        {
-            return op.ToLower() switch
-            {
-                "gt" => Expression.GreaterThan(left, right),
-                "gte" => Expression.GreaterThanOrEqual(left, right),
-                "lt" => Expression.LessThan(left, right),
-                "lte" => Expression.LessThanOrEqual(left, right),
-                _ => base.GetComparison(left, op, right)
-            };
+            return Expression.Constant(justDigits);
         }
     }
 }

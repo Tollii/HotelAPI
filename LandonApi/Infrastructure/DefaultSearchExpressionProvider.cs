@@ -1,21 +1,32 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
+using System.Threading.Tasks;
 
 namespace LandonApi.Infrastructure
 {
     public class DefaultSearchExpressionProvider : ISearchExpressionProvider
     {
-        public virtual ConstantExpression GetValue(string input)
-            => Expression.Constant(input);
+        protected const string EqualsOperator = "eq";
 
-        public virtual Expression GetComparison(MemberExpression left, string op, ConstantExpression right)
+        public virtual IEnumerable<string> GetOperators()
         {
-            if (!op.Equals("eq", StringComparison.OrdinalIgnoreCase))
+            yield return EqualsOperator;
+        }
+
+        public virtual Expression GetComparison(
+            MemberExpression left, string op, ConstantExpression right)
+        {
+            switch (op.ToLower())
             {
-                throw new ArgumentException($"Invalid operator '{op}'.");
+                case EqualsOperator: return Expression.Equal(left, right);
+                default: throw new ArgumentException($"Invalid operator '{op}'.");
             }
 
-            return Expression.Equal(left, right);
         }
+
+        public virtual ConstantExpression GetValue(string input)
+            => Expression.Constant(input);
     }
 }

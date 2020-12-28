@@ -11,9 +11,10 @@ using Microsoft.EntityFrameworkCore;
 using LandonApi.Filters;
 using LandonApi.Models;
 using LandonApi.Services;
+using LandonApi.Infrastructure;
 
 using AutoMapper;
-using LandonApi.Infrastructure;
+using Newtonsoft.Json;
 
 namespace LandonApi
 {
@@ -51,16 +52,22 @@ namespace LandonApi
             services.AddAutoMapper(options => options.AddProfile<MappingProfile>());
 
             services.AddMvc(options =>
-            {
-                // Filter exceptions so production only gets simplified exception errors
-                options.Filters.Add<JsonExceptionFilter>();
-                
-                // Rewrite links
-                options.Filters.Add<LinkRewritingFilter>();
+                {
+                    options.EnableEndpointRouting = false;
 
-                // Require https
-                options.Filters.Add<RequireHttpsOrCloseAttribute>();
-            })
+                    options.CacheProfiles.Add("Static", new CacheProfile
+                    {
+                        Duration = 86400
+                    });
+                    // Filter exceptions so production only gets simplified exception errors
+                    options.Filters.Add<JsonExceptionFilter>();
+
+                    // Rewrite links
+                    options.Filters.Add<LinkRewritingFilter>();
+
+                    // Require https
+                    options.Filters.Add<RequireHttpsOrCloseAttribute>();
+                })
                 .SetCompatibilityVersion(CompatibilityVersion.Version_3_0);
 
             services.AddControllers();
@@ -83,6 +90,8 @@ namespace LandonApi
                 options.ApiVersionSelector
                     = new CurrentImplementationApiVersionSelector(options);
             });
+
+            services.AddResponseCaching();
 
             // CORS, remove for production
             services.AddCors(options =>
@@ -126,6 +135,10 @@ namespace LandonApi
 
             // CORS, remove before production
             app.UseCors("AllowMyApp");
+
+            app.UseResponseCaching();
+
+            app.UseMvc();
         }
     }
 }
