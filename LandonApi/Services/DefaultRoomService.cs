@@ -5,6 +5,8 @@ using System.Threading.Tasks;
 using AutoMapper;
 using AutoMapper.QueryableExtensions;
 using LandonApi.Models;
+using LandonApi.Models.Paging;
+using LandonApi.Models.Room;
 using Microsoft.EntityFrameworkCore;
 
 namespace LandonApi.Services

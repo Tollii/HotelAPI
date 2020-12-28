@@ -1,5 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using LandonApi.Models;
+using LandonApi.Models.Booking;
+using LandonApi.Models.Room;
 
 namespace LandonApi
 {

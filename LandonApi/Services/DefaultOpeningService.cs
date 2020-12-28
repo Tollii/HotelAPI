@@ -6,6 +6,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using LandonApi.Models.Booking;
+using LandonApi.Models.Opening;
+using LandonApi.Models.Paging;
 
 namespace LandonApi.Services
 {

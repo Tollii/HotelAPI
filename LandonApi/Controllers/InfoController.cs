@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using LandonApi.Infrastructure;
+using LandonApi.Infrastructure.Caching;
 using Microsoft.AspNetCore.WebUtilities;
 
 namespace LandonApi.Controllers
