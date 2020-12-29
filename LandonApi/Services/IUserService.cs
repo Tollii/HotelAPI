@@ -1,0 +1,14 @@
+﻿using LandonApi.Models;
+using System.Threading.Tasks;
+using LandonApi.Models.Paging;
+
+namespace LandonApi.Services
+{
+    public interface IUserService
+    {
+        Task<PagedResults<User>> GetUsersAsync(
+            PagingOptions pagingOptions,
+            SortOptions<User, UserEntity> sortOptions,
+            SearchOptions<User, UserEntity> searchOptions);
+    }
+}
