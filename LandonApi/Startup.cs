@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
 
 using LandonApi.Filters;
 using LandonApi.Models;
@@ -15,7 +16,6 @@ using LandonApi.Infrastructure;
 
 using AutoMapper;
 using LandonApi.Models.Paging;
-using Newtonsoft.Json;
 
 namespace LandonApi
 {
@@ -31,11 +31,32 @@ namespace LandonApi
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-
             // Use in-memory database for quick dev and testing
             // TODO: Swap out for a real database in production
-            services.AddDbContext<HotelApiDbContext>(options => options.UseInMemoryDatabase("landondb"));
+            services.AddDbContext<HotelApiDbContext>(options =>
+            {
+                options.UseInMemoryDatabase("landondb");
+            });
+            
+            // Add ASP.NET Core Identity
+            // AddIdentityCoreService(services);
 
+            // services.AddIdentityCore<UserEntity>();
+                // .AddRoles<UserRoleEntity>()
+                // .AddDefaultTokenProviders()
+                // .AddSignInManager<SignInManager<UserEntity>>();
+            
+            // var builder = services.AddIdentityCore<UserEntity>();
+            // builder = new IdentityBuilder(builder.UserType, typeof(UserRoleEntity), builder.Services);
+            //
+            // builder.AddRoles<UserRoleEntity>()
+            //     .AddEntityFrameworkStores<HotelApiDbContext>()
+            //     .AddDefaultTokenProviders()
+            //     .AddSignInManager<SignInManager<UserEntity>>();
+            
+            
+            
+            
             // Pull data from appsettings.json
             services.Configure<HotelInfo>(
                 Configuration.GetSection("Info"));
@@ -48,6 +69,8 @@ namespace LandonApi
             services.AddScoped<IOpeningService, DefaultOpeningService>();
             services.AddScoped<IBookingService, DefaultBookingService>();
             services.AddScoped<IDateLogicService, DefaultDateLogicService>();
+            // services.AddScoped()<IUserService, DefaultUserService>();
+            
             
             // Adds automapper dependency to reduce boilerplate code in controller
             services.AddAutoMapper(options => options.AddProfile<MappingProfile>());
@@ -70,7 +93,7 @@ namespace LandonApi
                     options.Filters.Add<RequireHttpsOrCloseAttribute>();
                 })
                 .SetCompatibilityVersion(CompatibilityVersion.Version_3_0);
-
+            
             services.AddControllers();
 
             // Configure API docs
@@ -141,5 +164,18 @@ namespace LandonApi
 
             app.UseMvc();
         }
+
+        // Adds ASP.NET Core identity for API
+        private static void AddIdentityCoreService(IServiceCollection services)
+        {
+            var builder = services.AddIdentityCore<UserEntity>();
+            builder = new IdentityBuilder(builder.UserType, typeof(UserRoleEntity), builder.Services);
+
+            builder.AddRoles<UserRoleEntity>()
+                .AddEntityFrameworkStores<HotelApiDbContext>()
+                .AddDefaultTokenProviders()
+                .AddSignInManager<SignInManager<UserEntity>>();
+        }
+        
     }
 }

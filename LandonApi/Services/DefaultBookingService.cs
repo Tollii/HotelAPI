@@ -41,7 +41,7 @@ namespace LandonApi.Services
 
             var id = Guid.NewGuid();
 
-            var newBooking = _context.Bookings.Add(new BookingEntity
+            var newBooking = await _context.Bookings.AddAsync(new BookingEntity
             {
                 Id = id,
                 CreatedAt = DateTimeOffset.UtcNow,

@@ -1,9 +1,5 @@
 ﻿using AutoMapper;
 using LandonApi.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using LandonApi.Infrastructure.Sorting;
 using LandonApi.Models.Booking;
 using LandonApi.Models.Opening;
@@ -60,6 +56,12 @@ namespace LandonApi.Infrastructure
                     Link.To(
                         nameof(Controllers.RoomsController.GetRoomById),
                         new { roomId = src.Id })));
+
+            CreateMap<UserEntity, User>()
+                .ForMember(dest => dest.Self,
+                    opt => opt.MapFrom(
+                        src => Link.To(nameof(Controllers.UsersController.GetUserById),
+                            new {userId = src.Id})));
 
         }
     }
